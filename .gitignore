@@ -1,0 +1,15 @@
+*.class
+*.jar
+*.war
+*.ear
+
+*.xls#
+*.ods#
+*.bak
+*.swp
+
+/project/project
+/project/target
+/target
+
+/src/main/scala/jp.rf.swfsample/config.scala

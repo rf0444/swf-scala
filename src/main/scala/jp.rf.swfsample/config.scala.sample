@@ -1,0 +1,12 @@
+package jp.rf.swfsample
+
+object Config {
+  val accessKey = ""
+  val secretKey = ""
+  val regionName = ""
+  val domainName = ""
+  val activityName = ""
+  val activityVersion = ""
+  val decisionTaskListName = ""
+  val activityTaskListName = ""
+}

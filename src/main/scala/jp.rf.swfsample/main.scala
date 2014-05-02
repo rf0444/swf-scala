@@ -5,24 +5,54 @@ import com.amazonaws.services.simpleworkflow.model._
 import jp.rf.swfsample.Config
 import jp.rf.swfsample.SWFFactory
 
+object Starter {
+  def main(args: Array[String]) {
+    if (args.length < 1) {
+      println("usage: {program} input")
+      return
+    }
+    val swf = SWFFactory.create(Config.accessKey, Config.secretKey, Config.regionName)
+    val timestamp = System.currentTimeMillis.toString
+    swf.startWorkflowExecution(new StartWorkflowExecutionRequest()
+      .withDomain(Config.domainName)
+      .withWorkflowType(new WorkflowType()
+        .withName(Config.workflowType.name)
+        .withVersion(Config.workflowType.version)
+      )
+      .withWorkflowId(timestamp)
+      .withInput(args(0))
+    )
+  }
+}
+
 object Decider {
   def main(args: Array[String]) {
     val swf = SWFFactory.create(Config.accessKey, Config.secretKey, Config.regionName)
-    val decisionTask = swf.pollForDecisionTask(new PollForDecisionTaskRequest()
+    val workflow = swf.describeWorkflowType(new DescribeWorkflowTypeRequest()
       .withDomain(Config.domainName)
-      .withTaskList(new TaskList()
-        .withName(Config.decisionTaskListName)
+      .withWorkflowType(new WorkflowType()
+        .withName(Config.workflowType.name)
+        .withVersion(Config.workflowType.version)
       )
     )
-    if (decisionTask.getTaskToken == null) {
-      println("no tasks")
-      return
+    val taskListName = workflow.getConfiguration.getDefaultTaskList.getName
+    while (true) {
+      val decisionTask = swf.pollForDecisionTask(new PollForDecisionTaskRequest()
+        .withDomain(Config.domainName)
+        .withTaskList(new TaskList()
+          .withName(taskListName)
+        )
+      )
+      if (decisionTask.getTaskToken == null) {
+        println("no tasks")
+        return
+      }
+      val decision = decide(decisionTask)
+      swf.respondDecisionTaskCompleted(new RespondDecisionTaskCompletedRequest()
+        .withTaskToken(decisionTask.getTaskToken)
+        .withDecisions(decision)
+      )
     }
-    val decision = decide(decisionTask)
-    swf.respondDecisionTaskCompleted(new RespondDecisionTaskCompletedRequest()
-      .withTaskToken(decisionTask.getTaskToken)
-      .withDecisions(decision)
-    )
   }
   def decide(decisionTask: DecisionTask): Decision = {
     import scala.collection.JavaConverters._
@@ -42,34 +72,43 @@ object Decider {
       .withScheduleActivityTaskDecisionAttributes(new ScheduleActivityTaskDecisionAttributes()
         .withActivityId(timestamp)
         .withActivityType(new ActivityType()
-          .withName(Config.activityName)
-          .withVersion(Config.activityVersion)
-        )
-        .withTaskList(new TaskList()
-          .withName(Config.activityTaskListName)
+          .withName(Config.activityType.name)
+          .withVersion(Config.activityType.version)
         )
         .withInput(input)
       )
   }
 }
+
 object Worker {
   def main(args: Array[String]) {
     val swf = SWFFactory.create(Config.accessKey, Config.secretKey, Config.regionName)
-    val activityTask = swf.pollForActivityTask(new PollForActivityTaskRequest()
+    val workflow = swf.describeWorkflowType(new DescribeWorkflowTypeRequest()
       .withDomain(Config.domainName)
-      .withTaskList(new TaskList()
-        .withName(Config.activityTaskListName)
+      .withWorkflowType(new WorkflowType()
+        .withName(Config.workflowType.name)
+        .withVersion(Config.workflowType.version)
       )
     )
-    if (activityTask.getTaskToken == null) {
-      println("no tasks")
-      return
+    val taskListName = workflow.getConfiguration.getDefaultTaskList.getName
+    while (true) {
+      val activityTask = swf.pollForActivityTask(new PollForActivityTaskRequest()
+        .withDomain(Config.domainName)
+        .withTaskList(new TaskList()
+          .withName(taskListName)
+        )
+      )
+      if (activityTask.getTaskToken == null) {
+        println("no tasks")
+        return
+      }
+      
+      println(activityTask.getInput)
+      
+      swf.respondActivityTaskCompleted(new RespondActivityTaskCompletedRequest()
+        .withTaskToken(activityTask.getTaskToken)
+        .withResult("printed: " + activityTask.getInput)
+      )
     }
-    
-    println(activityTask.getInput)
-    
-    swf.respondActivityTaskCompleted(new RespondActivityTaskCompletedRequest()
-      .withTaskToken(activityTask.getTaskToken)
-    )
   }
 }

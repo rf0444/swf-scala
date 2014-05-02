@@ -1,12 +1,11 @@
 package jp.rf.swfsample
 
 object Config {
+  case class TypeInfo(name: String, version: String)
   val accessKey = ""
   val secretKey = ""
   val regionName = ""
   val domainName = ""
-  val activityName = ""
-  val activityVersion = ""
-  val decisionTaskListName = ""
-  val activityTaskListName = ""
+  val workflowType = TypeInfo(name = "", version = "")
+  val activityType = TypeInfo(name = "", version = "")
 }

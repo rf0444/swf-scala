@@ -3,8 +3,7 @@ package jp.rf.swfsample.main
 import com.amazonaws.services.simpleworkflow._
 import com.amazonaws.services.simpleworkflow.model._
 
-import jp.rf.swfsample.Config
-import jp.rf.swfsample.SWFFactory
+import jp.rf.swfsample.{Config, SWFFactory}
 
 object Starter {
   def main(args: Array[String]) {

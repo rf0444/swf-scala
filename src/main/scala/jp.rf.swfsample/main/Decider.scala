@@ -1,14 +1,12 @@
 package jp.rf.swfsample.main
 
-import akka.actor.ActorDSL._
-import akka.actor.ActorRef
-import akka.actor.ActorSystem
+import akka.actor.ActorDSL.{Act, actor}
+import akka.actor.{ActorRef, ActorSystem}
 
 import com.amazonaws.services.simpleworkflow._
 import com.amazonaws.services.simpleworkflow.model._
 
-import jp.rf.swfsample.Config
-import jp.rf.swfsample.SWFFactory
+import jp.rf.swfsample.{Config, SWFFactory}
 
 object Decider {
   def main(args: Array[String]) {
@@ -16,7 +14,7 @@ object Decider {
     val actor = createActor
     actor ! 'execute
     println("decider started. press enter for stop.")
-    val str = scala.io.StdIn.readLine()
+    val str = readLine()
     println("stop another decision task pollings. please wait a minutes for current polling.")
     system.shutdown
   }

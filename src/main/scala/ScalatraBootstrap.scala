@@ -15,7 +15,7 @@ class ScalatraBootstrap extends LifeCycle {
     }
   })
   override def init(context: ServletContext) {
-    context.mount(new SamplePage(system, mainActor), "/sample/*")
+    context.mount(new SamplePage(mainActor), "/sample/*")
   }
   override def destroy(context:ServletContext) {
     system.shutdown()

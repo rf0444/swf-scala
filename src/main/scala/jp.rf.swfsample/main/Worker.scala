@@ -20,14 +20,14 @@ object Worker {
   }
   def createActor(implicit system: ActorSystem): ActorRef = {
     val swf = SWFFactory.create(Config.accessKey, Config.secretKey, Config.regionName)
-    val workflow = swf.describeWorkflowType(new DescribeWorkflowTypeRequest()
+    val activity = swf.describeActivityType(new DescribeActivityTypeRequest()
       .withDomain(Config.domainName)
-      .withWorkflowType(new WorkflowType()
-        .withName(Config.workflowType.name)
-        .withVersion(Config.workflowType.version)
+      .withActivityType(new ActivityType()
+        .withName(Config.activityType.name)
+        .withVersion(Config.activityType.version)
       )
     )
-    val taskListName = workflow.getConfiguration.getDefaultTaskList.getName
+    val taskListName = activity.getConfiguration.getDefaultTaskList.getName
     actor(new Act {
       become {
         case 'execute => {

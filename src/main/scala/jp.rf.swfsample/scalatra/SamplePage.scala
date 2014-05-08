@@ -7,13 +7,13 @@ import org.scalatra.json.JacksonJsonSupport
 
 case class Hoge(name: String, value: String)
 
-class SamplePage(mainActor: ActorRef) extends ScalatraServlet with JacksonJsonSupport {
+class SamplePage(mainActor: MainActor) extends ScalatraServlet with JacksonJsonSupport {
   protected implicit val jsonFormats: Formats = DefaultFormats
   before() {
     contentType = formats("json")
   }
   get("/hoge") {
-    mainActor ! 'hello
+    mainActor.actor ! 'hello
     Seq(Hoge("a", "100"), Hoge("b", "200"))
   }
 }

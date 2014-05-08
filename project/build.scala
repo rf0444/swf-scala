@@ -17,9 +17,9 @@ object SampleBuild extends Build {
       resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
       libraryDependencies ++= Seq(
         "com.amazonaws" % "aws-java-sdk" % "1.7.7",
-        "javax.servlet" % "servlet-api" % "2.5" % "provided",
         "org.eclipse.jetty" % "jetty-plus" % "9.1.5.v20140505" % "container",
         "org.eclipse.jetty" % "jetty-webapp" % "9.1.5.v20140505" % "container",
+        "org.eclipse.jetty.orbit" % "javax.servlet" % "3.0.0.v201112011016" % "container;provided;test" artifacts (Artifact("javax.servlet", "jar", "jar")),
         "org.json4s"   %% "json4s-jackson" % "3.2.6",
         "org.scalatra" %% "scalatra" % "2.2.2",
         "org.scalatra" %% "scalatra-json" % "2.2.2"

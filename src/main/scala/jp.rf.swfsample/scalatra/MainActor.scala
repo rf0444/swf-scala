@@ -1,12 +1,7 @@
 package jp.rf.swfsample.scalatra
 
-import scala.concurrent.Await
-import scala.concurrent.duration.{FiniteDuration, SECONDS}
-
 import akka.actor.ActorDSL.{Act, actor => act}
 import akka.actor.{ActorRef, ActorRefFactory, ActorSystem}
-import akka.pattern.{ask, pipe}
-import akka.util.Timeout
 
 sealed trait Action
 case object GetDeciders extends Action
@@ -18,23 +13,21 @@ case class Deciders(num: Int)
 case class Workers(num: Int)
 
 class MainActor(val system: ActorSystem) {
-  implicit val executor = system.dispatcher
-  implicit val timeout = Timeout(FiniteDuration(5, SECONDS))
   val actor = act(system, "main-actor")(new Act {
-    val worker = WorkerActor.create(context)
+    val worker = new WorkerActor(context)
     become {
       case 'hello => {
         println("hello")
         println(self)
       }
       case 'startWorker => {
-        worker ! 'start
+        worker.actor ! 'start
       }
       case 'stopWorker => {
-        worker ! 'stop
+        worker.actor ! 'stop
       }
       case 'isActiveWorker => {
-        worker ? 'isActive pipeTo sender
+        sender ! worker.isActive
       }
       case GetDeciders => {
         sender ! Deciders(1)
@@ -52,31 +45,27 @@ class MainActor(val system: ActorSystem) {
   })
 }
 
-object WorkerActor {
-  def create(implicit factory: ActorRefFactory): ActorRef = {
-    act("worker-actor")(new Act {
-      var isActive = false
-      become {
-        case 'execute => {
-          if (isActive) {
-            println("execute")
-            Thread.sleep(2000)
-            self ! 'execute
-          }
-        }
-        case 'start => {
-          if (!isActive) {
-            isActive = true
-            self ! 'execute
-          }
-        }
-        case 'stop => {
-          isActive = false
-        }
-        case 'isActive => {
-          sender ! isActive
+class WorkerActor(val factory: ActorRefFactory) {
+  private[this] var isActive_ = false
+  def isActive = isActive_
+  val actor = act(factory)(new Act {
+    become {
+      case 'execute => {
+        if (isActive_) {
+          println("execute")
+          Thread.sleep(2000)
+          self ! 'execute
         }
       }
-    })
-  }
+      case 'start => {
+        if (!isActive_) {
+          isActive_ = true
+          self ! 'execute
+        }
+      }
+      case 'stop => {
+        isActive_ = false
+      }
+    }
+  })
 }

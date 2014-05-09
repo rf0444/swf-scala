@@ -1,7 +1,12 @@
 package jp.rf.swfsample.scalatra
 
+import scala.concurrent.Await
+import scala.concurrent.duration.{FiniteDuration, SECONDS}
+
 import akka.actor.ActorDSL.{Act, actor => act}
 import akka.actor.{ActorRef, ActorSystem}
+import akka.pattern.{ask, pipe}
+import akka.util.Timeout
 
 sealed trait Action
 case object GetDeciders extends Action
@@ -13,10 +18,23 @@ case class Deciders(num: Int)
 case class Workers(num: Int)
 
 class MainActor(val system: ActorSystem) {
-  val actor = act(system, "MainActor")(new Act {
+  implicit val executor = system.dispatcher
+  implicit val timeout = Timeout(FiniteDuration(5, SECONDS))
+  val actor = act(system, "main-actor")(new Act {
+    val worker = WorkerActor.create(system)
     become {
       case 'hello => {
         println("hello")
+        println(self)
+      }
+      case 'startWorker => {
+        worker ! 'start
+      }
+      case 'stopWorker => {
+        worker ! 'stop
+      }
+      case 'isActiveWorker => {
+        worker ? 'isActive pipeTo sender
       }
       case GetDeciders => {
         sender ! Deciders(1)
@@ -32,4 +50,33 @@ class MainActor(val system: ActorSystem) {
       }
     }
   })
+}
+
+object WorkerActor {
+  def create(implicit system: ActorSystem): ActorRef = {
+    act(new Act {
+      var isActive = false
+      become {
+        case 'execute => {
+          if (isActive) {
+            println("execute")
+            Thread.sleep(2000)
+            self ! 'execute
+          }
+        }
+        case 'start => {
+          if (!isActive) {
+            isActive = true
+            self ! 'execute
+          }
+        }
+        case 'stop => {
+          isActive = false
+        }
+        case 'isActive => {
+          sender ! isActive
+        }
+      }
+    })
+  }
 }

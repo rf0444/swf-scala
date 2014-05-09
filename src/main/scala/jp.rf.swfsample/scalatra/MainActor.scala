@@ -4,7 +4,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.{FiniteDuration, SECONDS}
 
 import akka.actor.ActorDSL.{Act, actor => act}
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.{ActorRef, ActorRefFactory, ActorSystem}
 import akka.pattern.{ask, pipe}
 import akka.util.Timeout
 
@@ -21,7 +21,7 @@ class MainActor(val system: ActorSystem) {
   implicit val executor = system.dispatcher
   implicit val timeout = Timeout(FiniteDuration(5, SECONDS))
   val actor = act(system, "main-actor")(new Act {
-    val worker = WorkerActor.create(system)
+    val worker = WorkerActor.create(context)
     become {
       case 'hello => {
         println("hello")
@@ -53,8 +53,8 @@ class MainActor(val system: ActorSystem) {
 }
 
 object WorkerActor {
-  def create(implicit system: ActorSystem): ActorRef = {
-    act(new Act {
+  def create(implicit factory: ActorRefFactory): ActorRef = {
+    act("worker-actor")(new Act {
       var isActive = false
       become {
         case 'execute => {

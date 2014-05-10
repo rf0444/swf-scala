@@ -46,7 +46,7 @@ class MainActor(val system: ActorSystem) {
 }
 
 class WorkerActor(val factory: ActorRefFactory) {
-  private[this] var isActive_ = false
+  @volatile private[this] var isActive_ = false
   def isActive = isActive_
   val actor = act(factory)(new Act {
     become {

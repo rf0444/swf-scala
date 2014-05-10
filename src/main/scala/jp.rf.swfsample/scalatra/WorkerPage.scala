@@ -23,12 +23,41 @@ class WorkerPage(mainActor: MainActor) extends ScalatraServlet with JacksonJsonS
       }
     }
   }
-  put("/") {
-    val workers = parsedBody.extract[Workers]
+  get("/:id") {
+    val id = params("id")
     new AsyncResult {
       val is = {
         implicit val timeout = Timeout(FiniteDuration(5, SECONDS))
-        mainActor.actor ? SetWorkers(workers.num)
+        mainActor.actor ? GetWorker(id) map {
+          case None => {
+            status = 404
+          }
+          case Some(worker) => worker
+        }
+      }
+    }
+  }
+  post("/") {
+    val input = parsedBody.extract[WorkerInput]
+    new AsyncResult {
+      val is = {
+        implicit val timeout = Timeout(FiniteDuration(5, SECONDS))
+        mainActor.actor ? AddWorker(input)
+      }
+    }
+  }
+  put("/:id") {
+    val id = params("id")
+    val input = parsedBody.extract[WorkerInput]
+    new AsyncResult {
+      val is = {
+        implicit val timeout = Timeout(FiniteDuration(5, SECONDS))
+        mainActor.actor ? SetWorker(id, input) map {
+          case None => {
+            status = 404
+          }
+          case Some(worker) => worker
+        }
       }
     }
   }

@@ -9,8 +9,8 @@ import org.json4s.{DefaultFormats, Formats}
 import org.scalatra.{AsyncResult, FutureSupport, ScalatraServlet}
 import org.scalatra.json.JacksonJsonSupport
 
-class WorkerPage(worker: WorkerMainActor) extends ScalatraServlet with JacksonJsonSupport with FutureSupport {
-  protected implicit def executor: ExecutionContext = worker.system.dispatcher
+class DeciderPage(decider: DeciderMainActor) extends ScalatraServlet with JacksonJsonSupport with FutureSupport {
+  protected implicit def executor: ExecutionContext = decider.system.dispatcher
   protected implicit val jsonFormats: Formats = DefaultFormats
   before() {
     contentType = formats("json")
@@ -19,7 +19,7 @@ class WorkerPage(worker: WorkerMainActor) extends ScalatraServlet with JacksonJs
     new AsyncResult {
       val is = {
         implicit val timeout = Timeout(FiniteDuration(5, SECONDS))
-        worker.actor ? GetWorkers
+        decider.actor ? GetDeciders
       }
     }
   }
@@ -28,37 +28,38 @@ class WorkerPage(worker: WorkerMainActor) extends ScalatraServlet with JacksonJs
     new AsyncResult {
       val is = {
         implicit val timeout = Timeout(FiniteDuration(5, SECONDS))
-        worker.actor ? GetWorker(id) map {
+        decider.actor ? GetDecider(id) map {
           case None => {
             status = 404
           }
-          case Some(worker) => worker
+          case Some(decider) => decider
         }
       }
     }
   }
   post("/") {
-    val input = parsedBody.extract[WorkerInput]
+    val input = parsedBody.extract[DeciderInput]
     new AsyncResult {
       val is = {
         implicit val timeout = Timeout(FiniteDuration(5, SECONDS))
-        worker.actor ? AddWorker(input)
+        decider.actor ? AddDecider(input)
       }
     }
   }
   put("/:id") {
     val id = params("id")
-    val input = parsedBody.extract[WorkerInput]
+    val input = parsedBody.extract[DeciderInput]
     new AsyncResult {
       val is = {
         implicit val timeout = Timeout(FiniteDuration(5, SECONDS))
-        worker.actor ? SetWorker(id, input) map {
+        decider.actor ? SetDecider(id, input) map {
           case None => {
             status = 404
           }
-          case Some(worker) => worker
+          case Some(decider) => decider
         }
       }
     }
   }
 }
+

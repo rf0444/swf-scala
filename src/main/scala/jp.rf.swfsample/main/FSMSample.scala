@@ -1,7 +1,12 @@
 package jp.rf.swfsample.main
 
+import scala.concurrent.Await
+import scala.concurrent.duration._
+
 import akka.actor.ActorDSL.{Act, actor => act}
 import akka.actor.{ActorRef, ActorSystem, FSM}
+import akka.pattern.ask
+import akka.util.Timeout
 
 object FSMSample {
   sealed trait State
@@ -80,14 +85,35 @@ object FSMSample {
         case Event(Done, _) => goto(Inactive)
         case Event(Start, _) => goto(Active(Working, true))
       }
+      whenUnhandled {
+        case Event('state, _) => {
+          sender ! stateName
+          stay
+        }
+      }
       initialize
     })
+    implicit val timeout = Timeout(FiniteDuration(5, SECONDS))
     actor ! Start
-    Thread.sleep(4000)
+    Thread.sleep(1000)
+    println(Await.result(actor ? 'state, timeout.duration))
+    Thread.sleep(1500)
+    println(Await.result(actor ? 'state, timeout.duration))
+    Thread.sleep(1500)
+    println(Await.result(actor ? 'state, timeout.duration))
     actor ! Stop
-    Thread.sleep(2000)
+    println(Await.result(actor ? 'state, timeout.duration))
+    Thread.sleep(1000)
+    println(Await.result(actor ? 'state, timeout.duration))
     actor ! Start
-    Thread.sleep(4000)
+    Thread.sleep(1000)
+    println(Await.result(actor ? 'state, timeout.duration))
+    Thread.sleep(1400)
+    println(Await.result(actor ? 'state, timeout.duration))
+    actor ! Stop
+    println(Await.result(actor ? 'state, timeout.duration))
+    Thread.sleep(1500)
+    println(Await.result(actor ? 'state, timeout.duration))
     system.shutdown
   }
 }

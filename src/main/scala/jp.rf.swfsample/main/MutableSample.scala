@@ -13,7 +13,7 @@ object MutableSample {
   def main(args: Array[String]) {
     implicit val system = ActorSystem()
     val a = MutableActor.create(new MutableActorConf[List[String], Action] {
-      val initialValue = Nil
+      override val initialValue = Nil
       override def action(xs: List[String], e: Action, act: Actor) = e match {
         case Add(str) => {
           str :: xs

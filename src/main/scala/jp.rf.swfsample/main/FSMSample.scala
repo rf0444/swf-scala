@@ -7,7 +7,7 @@ import akka.actor.ActorSystem
 import akka.pattern.ask
 import akka.util.Timeout
 
-import jp.rf.swfsample.actor.swf.ActivityActor
+import jp.rf.swfsample.actor.swf.{ActivityActor, ActivityActorConf}
 import jp.rf.swfsample.actor.swf.ActivityActor.{Start, Stop, GetState}
 
 object FSMSample {
@@ -15,19 +15,19 @@ object FSMSample {
   
   def main(args: Array[String]) {
     implicit val system = ActorSystem()
-    val activity = ActivityActor.create(
-      poll = {
+    val activity = ActivityActor.create(new ActivityActorConf[Task] {
+      override def poll = {
          println("polling")
          Thread.sleep(500)
          println("polled")
          Some(Task("hoge"))
-      },
-      execute = (task: Task) => {
+      }
+      override def execute(task: Task) = {
         println("working - " + task.name)
         Thread.sleep(500)
         println("done")
       }
-    )
+    })
     implicit val timeout = Timeout(FiniteDuration(5, SECONDS))
     activity ! Start
     Thread.sleep(1000)

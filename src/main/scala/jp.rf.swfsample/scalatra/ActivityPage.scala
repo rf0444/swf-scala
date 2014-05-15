@@ -3,14 +3,19 @@ package jp.rf.swfsample.scalatra
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
+import akka.actor.{ActorRef, ActorRefFactory}
 import akka.pattern.ask
 import akka.util.Timeout
 import org.json4s.{DefaultFormats, Formats}
 import org.scalatra.{AsyncResult, FutureSupport, ScalatraServlet}
 import org.scalatra.json.JacksonJsonSupport
 
-class DeciderPage(decider: DeciderMainActor) extends ScalatraServlet with JacksonJsonSupport with FutureSupport {
-  protected implicit def executor: ExecutionContext = decider.system.dispatcher
+import jp.rf.swfsample.scalatra.data.{GetAll, Get, Add, Set}
+
+class ActivityPage[Input: Manifest](actor: ActorRef)(implicit factory: ActorRefFactory)
+  extends ScalatraServlet with JacksonJsonSupport with FutureSupport
+{
+  protected implicit def executor: ExecutionContext = factory.dispatcher
   protected implicit val jsonFormats: Formats = DefaultFormats
   before() {
     contentType = formats("json")
@@ -19,7 +24,7 @@ class DeciderPage(decider: DeciderMainActor) extends ScalatraServlet with Jackso
     new AsyncResult {
       val is = {
         implicit val timeout = Timeout(FiniteDuration(5, SECONDS))
-        decider.actor ? GetDeciders
+        actor ? GetAll
       }
     }
   }
@@ -28,35 +33,35 @@ class DeciderPage(decider: DeciderMainActor) extends ScalatraServlet with Jackso
     new AsyncResult {
       val is = {
         implicit val timeout = Timeout(FiniteDuration(5, SECONDS))
-        decider.actor ? GetDecider(id) map {
+        actor ? Get(id) map {
           case None => {
             status = 404
           }
-          case Some(decider) => decider
+          case Some(out) => out
         }
       }
     }
   }
   post("/") {
-    val input = parsedBody.extract[DeciderInput]
+    val input = parsedBody.extract[Input]
     new AsyncResult {
       val is = {
         implicit val timeout = Timeout(FiniteDuration(5, SECONDS))
-        decider.actor ? AddDecider(input)
+        actor ? Add(input)
       }
     }
   }
   put("/:id") {
     val id = params("id")
-    val input = parsedBody.extract[DeciderInput]
+    val input = parsedBody.extract[Input]
     new AsyncResult {
       val is = {
         implicit val timeout = Timeout(FiniteDuration(5, SECONDS))
-        decider.actor ? SetDecider(id, input) map {
+        actor ? Set(id, input) map {
           case None => {
             status = 404
           }
-          case Some(decider) => decider
+          case Some(out) => out
         }
       }
     }

@@ -2,12 +2,12 @@ package jp.rf.swfsample.actor
 
 import scala.reflect.ClassTag
 
-import akka.actor.ActorDSL.actor
-import akka.actor.{Actor, ActorRef, ActorRefFactory}
+import akka.actor.{Actor, ActorRef, ActorRefFactory, Props}
 
 import jp.rf.swfsample.util.safeCast
 
 trait MutableActorConf[T, E] {
+  val name: Option[String] = None
   val initialValue: T
   def action(value: T, event: E, act: Actor): T
   def unhandledAction(value: T, event: Any, act: Actor): T = value
@@ -15,7 +15,10 @@ trait MutableActorConf[T, E] {
 
 object MutableActor {
   def create[T, E: ClassTag](conf: MutableActorConf[T, E])(implicit factory: ActorRefFactory): ActorRef = {
-    actor(new MutableActor(conf))
+    val p = Props(new MutableActor(conf))
+    conf.name
+      .map(name => factory.actorOf(p, name = name))
+      .getOrElse(factory.actorOf(p))
   }
 }
 class MutableActor[T, E: ClassTag](conf: MutableActorConf[T, E]) extends Actor {

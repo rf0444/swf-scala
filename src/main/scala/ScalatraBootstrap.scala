@@ -1,14 +1,19 @@
+import javax.servlet.ServletContext
+import scala.concurrent.duration._
+
 import akka.actor.ActorSystem
+import akka.util.Timeout
 import com.amazonaws.services.simpleworkflow._
 import com.amazonaws.services.simpleworkflow.model._
-import javax.servlet.ServletContext
 import org.scalatra.LifeCycle
 
 import jp.rf.swfsample.{Config, SWFFactory}
-import jp.rf.swfsample.scalatra.{DeciderMainActor, DeciderPage, WorkerMainActor, WorkerPage}
+import jp.rf.swfsample.scalatra.{ActivityPage, DecidersActor, WorkersActor}
+import jp.rf.swfsample.scalatra.data.{DeciderInput, WorkerInput}
 
 class ScalatraBootstrap extends LifeCycle {
-  val system = ActorSystem("sample")
+  implicit val system = ActorSystem("sample")
+  implicit val timeout = Timeout(FiniteDuration(5, SECONDS))
   val swf = SWFFactory.create(Config.accessKey, Config.secretKey, Config.regionName)
   val domainName = Config.domainName
   val workflowType = new WorkflowType()
@@ -17,11 +22,11 @@ class ScalatraBootstrap extends LifeCycle {
   val activityType = new ActivityType()
     .withName(Config.activityType.name)
     .withVersion(Config.activityType.version)
-  val deciderMainActor = new DeciderMainActor(system, swf, domainName, workflowType, activityType)
-  val workerMainActor = new WorkerMainActor(system, swf, domainName, activityType)
+  val decidersActor = DecidersActor.create(swf, domainName, workflowType, activityType)
+  val workersActor = WorkersActor.create(swf, domainName, activityType)
   override def init(context: ServletContext) {
-    context.mount(new DeciderPage(deciderMainActor), "/deciders")
-    context.mount(new WorkerPage(workerMainActor), "/workers")
+    context.mount(new ActivityPage[DeciderInput](decidersActor), "/deciders")
+    context.mount(new ActivityPage[WorkerInput](workersActor), "/workers")
   }
   override def destroy(context:ServletContext) {
     system.shutdown()

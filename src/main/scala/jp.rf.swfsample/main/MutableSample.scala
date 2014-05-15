@@ -1,6 +1,6 @@
 package jp.rf.swfsample.main
 
-import akka.actor.ActorSystem
+import akka.actor.{Actor, ActorSystem}
 
 import jp.rf.swfsample.actor.{MutableActor, MutableActorConf}
 
@@ -14,7 +14,7 @@ object MutableSample {
     implicit val system = ActorSystem()
     val a = MutableActor.create(new MutableActorConf[List[String], Action] {
       val initialValue = Nil
-      override def action(xs: List[String], e: Action, act: MutableAct) = e match {
+      override def action(xs: List[String], e: Action, act: Actor) = e match {
         case Add(str) => {
           str :: xs
         }

@@ -3,7 +3,7 @@ package jp.rf.swfsample.actor.swf
 import scala.reflect.ClassTag
 
 import akka.actor.ActorDSL.{Act, actor}
-import akka.actor.{ActorRef, ActorRefFactory}
+import akka.actor.{Actor, ActorRef, ActorRefFactory}
 import akka.pattern.ask
 
 import jp.rf.swfsample.actor.{FSMActor, FSMActorConf}
@@ -42,13 +42,6 @@ object ActivityActor {
       }
     })
     FSMActor.create(new FSMActorConf[State, Action[T]] {
-      val states = Seq(
-        Inactive,
-        Active(Polling, true),
-        Active(Polling, false),
-        Active(Working, true),
-        Active(Working, false)
-      )
       val initialState = Inactive
       override def transition(state: State, event: Action[T]) = (state, event) match {
         case (Inactive,               Start)           => Active(Polling, true)
@@ -62,7 +55,7 @@ object ActivityActor {
         case (Active(Working, false), Start)           => Active(Working, true)
         case (status,                 _)               => status
       }
-      override def action(state: State, event: Action[T], act: FSMAct) {
+      override def action(state: State, event: Action[T], act: Actor) {
         implicit val sender = act.self
         (state, event) match {
           case (Inactive,              Start)              => actionActor ! Poll

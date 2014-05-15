@@ -7,8 +7,8 @@ import akka.actor.ActorSystem
 import akka.pattern.ask
 import akka.util.Timeout
 
-import jp.rf.swfsample.actor.ActivityActor
-import jp.rf.swfsample.actor.ActivityActor.{Start, Stop, GetState}
+import jp.rf.swfsample.actor.swf.ActivityActor
+import jp.rf.swfsample.actor.swf.ActivityActor.{Start, Stop, GetState}
 
 object FSMSample {
   case class Task(name: String)

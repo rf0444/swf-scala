@@ -1,9 +1,11 @@
 package jp.rf.swfsample.actor
 
-import scala.reflect.{ClassTag, classTag}
+import scala.reflect.ClassTag
 
 import akka.actor.ActorDSL.{Act, actor}
 import akka.actor.{ActorRef, ActorRefFactory, FSM}
+
+import jp.rf.swfsample.util.safeCast
 
 trait FSMActorConf[S, E] {
   type FSMAct = Act with FSM[S, Unit]
@@ -17,7 +19,7 @@ trait FSMActorConf[S, E] {
 
 object FSMActor {
   def create[S, E: ClassTag](conf: FSMActorConf[S, E])(implicit factory: ActorRefFactory): ActorRef = {
-    actor(factory)(new Act with FSM[S, Unit] {
+    actor(new Act with FSM[S, Unit] {
       startWith(conf.initialState, ())
       for (state <- conf.states) {
         when(state) {
@@ -35,9 +37,5 @@ object FSMActor {
       }
       initialize
     })
-  }
-  def safeCast[A: ClassTag](x: Any): Option[A] = {
-    val cls = classTag[A].runtimeClass.asInstanceOf[Class[A]]
-    if (cls.isInstance(x)) Some(cls.cast(x)) else None
   }
 }

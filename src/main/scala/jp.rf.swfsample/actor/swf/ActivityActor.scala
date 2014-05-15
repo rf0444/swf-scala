@@ -1,10 +1,13 @@
-package jp.rf.swfsample.actor
+package jp.rf.swfsample.actor.swf
 
 import scala.reflect.ClassTag
 
 import akka.actor.ActorDSL.{Act, actor}
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.pattern.ask
+
+import jp.rf.swfsample.actor.{FSMActor, FSMActorConf}
+import jp.rf.swfsample.util.safeCast
 
 object ActivityActor {
   sealed trait State
@@ -33,7 +36,7 @@ object ActivityActor {
           sender ! Polled(poll)
         }
         case Execute(task) => {
-          FSMActor.safeCast[T](task).foreach(execute)
+          safeCast[T](task).foreach(execute)
           sender ! Done
         }
       }

@@ -10,8 +10,8 @@ import jp.rf.swfsample.util.safeCast
 trait MutableActorConf[T, E] {
   type MutableAct = Act with FSM[Unit, T]
   val initialValue: T
-  def action(value: T, event: E, actor: MutableAct): T
-  def unhandledAction(value: T, event: Any, actor: MutableAct): T = value
+  def action(value: T, event: E, act: MutableAct): T
+  def unhandledAction(value: T, event: Any, act: MutableAct): T = value
 }
 
 object MutableActor {

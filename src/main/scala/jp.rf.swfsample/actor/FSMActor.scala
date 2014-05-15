@@ -12,9 +12,9 @@ trait FSMActorConf[S, E] {
   val states: Seq[S]
   val initialState: S
   def transition(state: S, event: E): S
-  def action(state: S, event: E, actor: FSMAct): Unit
+  def action(state: S, event: E, act: FSMAct): Unit
   def unhandledTransition(state: S, event: Any): Option[S] = None
-  def unhandledAction(state: S, event: Any, actor: FSMAct): Unit = {}
+  def unhandledAction(state: S, event: Any, act: FSMAct): Unit = {}
 }
 
 object FSMActor {

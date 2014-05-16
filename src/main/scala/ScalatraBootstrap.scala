@@ -24,9 +24,11 @@ class ScalatraBootstrap extends LifeCycle {
     .withVersion(Config.activityType.version)
   val decidersActor = DecidersActor.create(swf, domainName, workflowType, activityType)
   val workersActor = WorkersActor.create(swf, domainName, activityType)
+  object DecidersPage extends ActivityPage[DeciderInput](decidersActor)
+  object WorkersPage extends ActivityPage[WorkerInput](workersActor)
   override def init(context: ServletContext) {
-    context.mount(new ActivityPage[DeciderInput](decidersActor), "/deciders")
-    context.mount(new ActivityPage[WorkerInput](workersActor), "/workers")
+    context.mount(DecidersPage, "/deciders")
+    context.mount(WorkersPage, "/workers")
   }
   override def destroy(context:ServletContext) {
     system.shutdown()

@@ -6,7 +6,7 @@ import com.amazonaws.services.simpleworkflow._
 import com.amazonaws.services.simpleworkflow.model._
 
 import jp.rf.swfsample.scalatra.data.{DeciderInput, DeciderOutput}
-import jp.rf.swfsample.actor.swf.{ActivityActor, DeciderActor}
+import jp.rf.swfsample.actor.swf.{ActivityActor, DeciderActorFactory}
 
 object DecidersActor {
   def create(
@@ -15,11 +15,10 @@ object DecidersActor {
     workflowType: WorkflowType,
     activityType: ActivityType
   )(implicit factory: ActorRefFactory, timeout: Timeout): ActorRef = {
+    val activityFactory = DeciderActorFactory.create(swf, domainName, workflowType, activityType)
     ActivitiesActor.create(new ActivitiesActorConf[DeciderInput, DeciderOutput] {
       override val name = "decider-admin-actor"
-      override def createActivity = {
-        DeciderActor.create(swf, domainName, workflowType, activityType)
-      }
+      override def createActivity = activityFactory.create
       override def createActivity(input: DeciderInput) = {
         val activity = createActivity
         if (input.active) {

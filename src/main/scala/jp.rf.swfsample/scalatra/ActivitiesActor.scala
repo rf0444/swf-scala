@@ -44,6 +44,7 @@ object ActivitiesActor {
         }
         case Add(input) => {
           val activity = conf.createActivity(input)
+          infoOf(activity) pipeTo act.sender
           activities + (actorIdOf(activity) -> activity)
         }
         case Set(id, input) => {

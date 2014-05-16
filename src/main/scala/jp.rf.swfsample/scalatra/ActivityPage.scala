@@ -12,7 +12,7 @@ import org.scalatra.json.JacksonJsonSupport
 
 import jp.rf.swfsample.scalatra.data.{GetAll, Get, Add, Set}
 
-class ActivityPage[Input: Manifest](actor: ActorRef)(implicit factory: ActorRefFactory)
+class ActivityPage[Input: Manifest](val actor: ActorRef)(implicit val factory: ActorRefFactory)
   extends ScalatraServlet with JacksonJsonSupport with FutureSupport
 {
   protected implicit def executor: ExecutionContext = factory.dispatcher

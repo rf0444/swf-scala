@@ -10,14 +10,16 @@ import jp.rf.swfsample.actor.swf.{ActivityActor, DeciderActorFactory}
 
 object DecidersActor {
   def create(
+    name: String,
     swf: AmazonSimpleWorkflowClient,
     domainName: String,
     workflowType: WorkflowType,
     activityType: ActivityType
   )(implicit factory: ActorRefFactory, timeout: Timeout): ActorRef = {
     val activityFactory = DeciderActorFactory.create(swf, domainName, workflowType, activityType)
+    val nm = name
     ActivitiesActor.create(new ActivitiesActorConf[DeciderInput, DeciderOutput] {
-      override val name = "decider-admin-actor"
+      override val name = nm
       override def createActivity = activityFactory.create
       override def createActivity(input: DeciderInput) = {
         val activity = createActivity

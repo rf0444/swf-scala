@@ -1,0 +1,10 @@
+aws {
+  accessKey = ""
+  secretKey = ""
+  swf {
+    regionName = ""
+    domainName = ""
+    workflowType { name = "", version = "" }
+    activityType { name = "", version = "" }
+  }
+}

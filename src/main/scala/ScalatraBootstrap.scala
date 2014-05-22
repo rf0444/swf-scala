@@ -3,27 +3,34 @@ import scala.concurrent.duration._
 
 import akka.actor.ActorSystem
 import akka.util.Timeout
-import com.amazonaws.services.simpleworkflow._
+import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflowClient
 import com.amazonaws.services.simpleworkflow.model._
+import com.typesafe.config.ConfigFactory
 import org.scalatra.LifeCycle
 
-import jp.rf.swfsample.{Config, SWFFactory}
+import jp.rf.swfsample.aws.ClientFactory
 import jp.rf.swfsample.scalatra.{ActivityPage, DecidersActor, WorkersActor}
 import jp.rf.swfsample.scalatra.data.{DeciderInput, WorkerInput}
 
 class ScalatraBootstrap extends LifeCycle {
+  val conf = ConfigFactory.load
   implicit val system = ActorSystem("sample")
   implicit val timeout = Timeout(FiniteDuration(5, SECONDS))
-  val swf = SWFFactory.create(Config.accessKey, Config.secretKey, Config.regionName)
-  val domainName = Config.domainName
+  val swf = ClientFactory.create(
+    clientClass = classOf[AmazonSimpleWorkflowClient],
+    accessKey = conf.getString("aws.accessKey"),
+    secretKey = conf.getString("aws.secretKey"),
+    regionName = conf.getString("aws.swf.regionName")
+  )
+  val domainName = conf.getString("aws.swf.domainName")
   val workflowType = new WorkflowType()
-    .withName(Config.workflowType.name)
-    .withVersion(Config.workflowType.version)
+    .withName(conf.getString("aws.swf.workflowType.name"))
+    .withVersion(conf.getString("aws.swf.workflowType.version"))
   val activityType = new ActivityType()
-    .withName(Config.activityType.name)
-    .withVersion(Config.activityType.version)
-  val decidersActor = DecidersActor.create(swf, domainName, workflowType, activityType)
-  val workersActor = WorkersActor.create(swf, domainName, activityType)
+    .withName(conf.getString("aws.swf.activityType.name"))
+    .withVersion(conf.getString("aws.swf.activityType.version"))
+  val decidersActor = DecidersActor.create("decider-admin-actor", swf, domainName, workflowType, activityType)
+  val workersActor = WorkersActor.create("worker-admin-actor", swf, domainName, activityType)
   object DecidersPage extends ActivityPage[DeciderInput](decidersActor)
   object WorkersPage extends ActivityPage[WorkerInput](workersActor)
   override def init(context: ServletContext) {

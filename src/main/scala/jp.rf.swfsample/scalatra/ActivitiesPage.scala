@@ -1,7 +1,6 @@
 package jp.rf.swfsample.scalatra
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
 
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.pattern.ask
@@ -12,18 +11,19 @@ import org.scalatra.json.JacksonJsonSupport
 
 import jp.rf.swfsample.scalatra.data.{GetAll, Get, Add, Set}
 
-class ActivityPage[Input: Manifest](val actor: ActorRef)(implicit val factory: ActorRefFactory)
+class ActivitiesPage[Input: Manifest](val actor: ActorRef)(implicit val factory: ActorRefFactory, val timeout: Timeout)
   extends ScalatraServlet with JacksonJsonSupport with FutureSupport
 {
   protected implicit def executor: ExecutionContext = factory.dispatcher
   protected implicit val jsonFormats: Formats = DefaultFormats
+  val to = timeout
   before() {
     contentType = formats("json")
   }
   get("/") {
     new AsyncResult {
       val is = {
-        implicit val timeout = Timeout(FiniteDuration(5, SECONDS))
+        implicit val timeout = to
         actor ? GetAll
       }
     }
@@ -32,7 +32,7 @@ class ActivityPage[Input: Manifest](val actor: ActorRef)(implicit val factory: A
     val id = params("id")
     new AsyncResult {
       val is = {
-        implicit val timeout = Timeout(FiniteDuration(5, SECONDS))
+        implicit val timeout = to
         actor ? Get(id) map {
           case None => {
             status = 404
@@ -46,7 +46,7 @@ class ActivityPage[Input: Manifest](val actor: ActorRef)(implicit val factory: A
     val input = parsedBody.extract[Input]
     new AsyncResult {
       val is = {
-        implicit val timeout = Timeout(FiniteDuration(5, SECONDS))
+        implicit val timeout = to
         actor ? Add(input)
       }
     }
@@ -56,7 +56,7 @@ class ActivityPage[Input: Manifest](val actor: ActorRef)(implicit val factory: A
     val input = parsedBody.extract[Input]
     new AsyncResult {
       val is = {
-        implicit val timeout = Timeout(FiniteDuration(5, SECONDS))
+        implicit val timeout = to
         actor ? Set(id, input) map {
           case None => {
             status = 404

@@ -9,8 +9,8 @@ import com.typesafe.config.ConfigFactory
 import org.scalatra.LifeCycle
 
 import jp.rf.swfsample.aws.ClientFactory
-import jp.rf.swfsample.scalatra.{ActivityPage, DecidersActor, WorkersActor}
-import jp.rf.swfsample.scalatra.data.{DeciderInput, WorkerInput}
+import jp.rf.swfsample.scalatra.{ActivitiesPage, DecidersActor, TasksPage, WorkersActor}
+import jp.rf.swfsample.scalatra.data.{DeciderInput, SetAll, WorkerInput}
 
 class ScalatraBootstrap extends LifeCycle {
   val conf = ConfigFactory.load
@@ -31,13 +31,16 @@ class ScalatraBootstrap extends LifeCycle {
     .withVersion(conf.getString("aws.swf.activityType.version"))
   val decidersActor = DecidersActor.create("decider-admin-actor", swf, domainName, workflowType, activityType)
   val workersActor = WorkersActor.create("worker-admin-actor", swf, domainName, activityType)
-  object DecidersPage extends ActivityPage[DeciderInput](decidersActor)
-  object WorkersPage extends ActivityPage[WorkerInput](workersActor)
+  object DecidersPage extends ActivitiesPage[DeciderInput](decidersActor)
+  object WorkersPage extends ActivitiesPage[WorkerInput](workersActor)
   override def init(context: ServletContext) {
     context.mount(DecidersPage, "/deciders")
     context.mount(WorkersPage, "/workers")
+    context.mount(new TasksPage(swf, domainName, workflowType), "/tasks")
   }
   override def destroy(context:ServletContext) {
     system.shutdown()
   }
+  decidersActor ! SetAll(DeciderInput(true))
+  workersActor ! SetAll(WorkerInput(true))
 }

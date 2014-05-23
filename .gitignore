@@ -8,8 +8,8 @@
 *.bak
 *.swp
 
-/project/project
-/project/target
-/target
+/project/project/target/
+/project/target/
+/target/
 
 /src/main/resources/application.conf

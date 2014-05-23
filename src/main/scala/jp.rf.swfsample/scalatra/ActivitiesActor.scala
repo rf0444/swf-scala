@@ -9,7 +9,7 @@ import akka.util.Timeout
 
 import jp.rf.swfsample.actor.{MutableActor, MutableActorConf}
 import jp.rf.swfsample.actor.swf.ActivityActor
-import jp.rf.swfsample.scalatra.data.{ActivityAction, GetAll, Get, Add, Set}
+import jp.rf.swfsample.scalatra.data.{ActivityAction, Add, Get, GetAll, Set, SetAll}
 
 trait ActivitiesActorConf[In, Out] {
   val initialNum: Int = 1
@@ -55,6 +55,10 @@ object ActivitiesActor {
               infoOf(activity) pipeTo act.sender
             }
           }
+          activities
+        }
+        case SetAll(input) => {
+          activities.values.foreach(conf.modifyActivity(input, _))
           activities
         }
       }

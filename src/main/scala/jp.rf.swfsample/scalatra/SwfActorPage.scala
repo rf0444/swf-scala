@@ -11,7 +11,7 @@ import org.scalatra.json.JacksonJsonSupport
 
 import jp.rf.swfsample.scalatra.data.{GetAll, Get, Add, Set}
 
-class ActivitiesPage[Input: Manifest](val actor: ActorRef)(implicit val factory: ActorRefFactory, val timeout: Timeout)
+class SwfActorPage[Input: Manifest](val actor: ActorRef)(implicit val factory: ActorRefFactory, val timeout: Timeout)
   extends ScalatraServlet with JacksonJsonSupport with FutureSupport
 {
   protected implicit def executor: ExecutionContext = factory.dispatcher

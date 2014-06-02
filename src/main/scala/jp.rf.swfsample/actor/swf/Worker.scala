@@ -4,37 +4,37 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import com.amazonaws.services.simpleworkflow._
 import com.amazonaws.services.simpleworkflow.model._
 
-object WorkerActorFactory {
+object WorkerFactory {
   def create(
     swf: AmazonSimpleWorkflowClient,
     domainName: String,
     activityType: ActivityType
-  ): WorkerActorFactory = {
+  ): WorkerFactory = {
     val activity = swf.describeActivityType(new DescribeActivityTypeRequest()
       .withDomain(domainName)
       .withActivityType(activityType)
     )
     val activityTaskListName = activity.getConfiguration.getDefaultTaskList.getName
-    new WorkerActorFactory(swf, domainName, activityTaskListName)
+    new WorkerFactory(swf, domainName, activityTaskListName)
   } 
 }
-class WorkerActorFactory(
+class WorkerFactory(
   val swf: AmazonSimpleWorkflowClient,
   val domainName: String,
   val taskListName: String
 ) {
   def create(implicit factory: ActorRefFactory): ActorRef = {
-    WorkerActor.create(swf, domainName, taskListName)
+    Worker.create(swf, domainName, taskListName)
   }
 }
 
-object WorkerActor {
+object Worker {
   def create(
     swf: AmazonSimpleWorkflowClient,
     domainName: String,
     taskListName: String
   )(implicit factory: ActorRefFactory): ActorRef = {
-    ActivityActor.create(new ActivityActorConf[ActivityTask] {
+    SwfActor.create(new SwfActorConf[ActivityTask] {
       override def poll = {
         val task = swf.pollForActivityTask(new PollForActivityTaskRequest()
           .withDomain(domainName)

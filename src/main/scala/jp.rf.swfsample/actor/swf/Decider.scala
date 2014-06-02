@@ -4,40 +4,40 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import com.amazonaws.services.simpleworkflow._
 import com.amazonaws.services.simpleworkflow.model._
 
-object DeciderActorFactory {
+object DeciderFactory {
   def create(
     swf: AmazonSimpleWorkflowClient,
     domainName: String,
     workflowType: WorkflowType,
     activityType: ActivityType
-  ): DeciderActorFactory = {
+  ): DeciderFactory = {
     val workflow = swf.describeWorkflowType(new DescribeWorkflowTypeRequest()
       .withDomain(domainName)
       .withWorkflowType(workflowType)
     )
     val workflowTaskListName = workflow.getConfiguration.getDefaultTaskList.getName
-    new DeciderActorFactory(swf, domainName, workflowTaskListName, activityType)
+    new DeciderFactory(swf, domainName, workflowTaskListName, activityType)
   } 
 }
-class DeciderActorFactory(
+class DeciderFactory(
   val swf: AmazonSimpleWorkflowClient,
   val domainName: String,
   val taskListName: String,
   val activityType: ActivityType
 ) {
   def create(implicit factory: ActorRefFactory): ActorRef = {
-    DeciderActor.create(swf, domainName, taskListName, activityType)
+    Decider.create(swf, domainName, taskListName, activityType)
   }
 }
 
-object DeciderActor {
+object Decider {
   def create(
     swf: AmazonSimpleWorkflowClient,
     domainName: String,
     taskListName: String,
     activityType: ActivityType
   )(implicit factory: ActorRefFactory): ActorRef = {
-    ActivityActor.create(new ActivityActorConf[DecisionTask] {
+    SwfActor.create(new SwfActorConf[DecisionTask] {
       override def poll = {
         val task = swf.pollForDecisionTask(new PollForDecisionTaskRequest()
           .withDomain(domainName)

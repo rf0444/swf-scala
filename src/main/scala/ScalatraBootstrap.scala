@@ -9,7 +9,7 @@ import com.typesafe.config.ConfigFactory
 import org.scalatra.LifeCycle
 
 import jp.rf.swfsample.aws.ClientFactory
-import jp.rf.swfsample.scalatra.{ActivitiesPage, DecidersActor, TasksPage, WorkersActor}
+import jp.rf.swfsample.scalatra.{SwfActorPage, DeciderManager, TaskPage, WorkerManager}
 import jp.rf.swfsample.scalatra.data.{DeciderInput, SetAll, WorkerInput}
 
 class ScalatraBootstrap extends LifeCycle {
@@ -29,18 +29,18 @@ class ScalatraBootstrap extends LifeCycle {
   val activityType = new ActivityType()
     .withName(conf.getString("aws.swf.activityType.name"))
     .withVersion(conf.getString("aws.swf.activityType.version"))
-  val decidersActor = DecidersActor.create("decider-admin-actor", swf, domainName, workflowType, activityType)
-  val workersActor = WorkersActor.create("worker-admin-actor", swf, domainName, activityType)
-  object DecidersPage extends ActivitiesPage[DeciderInput](decidersActor)
-  object WorkersPage extends ActivitiesPage[WorkerInput](workersActor)
+  val deciderManager = DeciderManager.create("decider-manager", swf, domainName, workflowType, activityType)
+  val workerManager = WorkerManager.create("worker-manager", swf, domainName, activityType)
+  object DeciderPage extends SwfActorPage[DeciderInput](deciderManager)
+  object WorkerPage extends SwfActorPage[WorkerInput](workerManager)
   override def init(context: ServletContext) {
-    context.mount(DecidersPage, "/deciders")
-    context.mount(WorkersPage, "/workers")
-    context.mount(new TasksPage(swf, domainName, workflowType), "/tasks")
+    context.mount(DeciderPage, "/deciders")
+    context.mount(WorkerPage, "/workers")
+    context.mount(new TaskPage(swf, domainName, workflowType), "/tasks")
   }
   override def destroy(context:ServletContext) {
     system.shutdown()
   }
-  decidersActor ! SetAll(DeciderInput(true))
-  workersActor ! SetAll(WorkerInput(true))
+  deciderManager ! SetAll(DeciderInput(true))
+  workerManager ! SetAll(WorkerInput(true))
 }

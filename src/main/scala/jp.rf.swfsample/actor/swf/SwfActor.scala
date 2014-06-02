@@ -9,13 +9,13 @@ import akka.pattern.ask
 import jp.rf.swfsample.actor.{FSMActor, FSMActorConf}
 import jp.rf.swfsample.util.safeCast
 
-trait ActivityActorConf[T] {
+trait SwfActorConf[T] {
   val name: Option[String] = None
   def poll: Option[T]
   def execute(task: T)
 }
 
-object ActivityActor {
+object SwfActor {
   sealed trait State
   case object Inactive extends State
   case class Active(status: ActiveStatus, cont: Boolean) extends State
@@ -35,7 +35,7 @@ object ActivityActor {
   case object Poll extends ActualAction[Nothing]
   case class Execute[T](task: T) extends ActualAction[T]
   
-  def create[T: ClassTag](conf: ActivityActorConf[T])(implicit factory: ActorRefFactory): ActorRef = {
+  def create[T: ClassTag](conf: SwfActorConf[T])(implicit factory: ActorRefFactory): ActorRef = {
     val actionActor = actor(factory)(new Act {
       become {
         case Poll => {

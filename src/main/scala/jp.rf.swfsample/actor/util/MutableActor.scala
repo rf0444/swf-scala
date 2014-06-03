@@ -1,4 +1,4 @@
-package jp.rf.swfsample.actor
+package jp.rf.swfsample.actor.util
 
 import scala.reflect.ClassTag
 

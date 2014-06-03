@@ -2,9 +2,15 @@ aws {
   accessKey = ""
   secretKey = ""
   swf {
-    regionName = ""
-    domainName = ""
-    workflowType { name = "", version = "" }
-    activityType { name = "", version = "" }
+    region = ""
+    domain = ""
+    version = ""
+    taskList {
+      decision = ""
+      activity {
+        short = ""
+        long = ""
+      }
+    }
   }
 }

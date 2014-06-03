@@ -1,4 +1,4 @@
-package jp.rf.swfsample.scalatra
+package jp.rf.swfsample.actor.manager
 
 import scala.collection.{GenSeq, SortedMap}
 import scala.concurrent.{Future, ExecutionContext}
@@ -7,9 +7,15 @@ import akka.actor.{Actor, ActorRef, ActorRefFactory}
 import akka.pattern.{ask, pipe}
 import akka.util.Timeout
 
-import jp.rf.swfsample.actor.{MutableActor, MutableActorConf}
-import jp.rf.swfsample.actor.swf.SwfActor.{GetState, State => ActorState}
-import jp.rf.swfsample.scalatra.data.{ManagerAction, Add, Get, GetAll, Set, SetAll}
+import jp.rf.swfsample.actor.swf.{GetState, State => ActorState}
+import jp.rf.swfsample.actor.util.{MutableActor, MutableActorConf}
+
+sealed trait ManagerAction[+T]
+case class Add[T](data: T) extends ManagerAction[T]
+case class Get(id: String) extends ManagerAction[Nothing]
+case object GetAll extends ManagerAction[Nothing]
+case class Set[T](id: String, data: T) extends ManagerAction[T]
+case class SetAll[T](data: T) extends ManagerAction[T]
 
 trait SwfActorManagerConf[In, Out] {
   val initialNum: Int = 1
@@ -21,7 +27,6 @@ trait SwfActorManagerConf[In, Out] {
 }
 
 object SwfActorManager {
-  val initialNum = 1
   def create[In, Out](conf: SwfActorManagerConf[In, Out])(implicit factory: ActorRefFactory, timeout: Timeout): ActorRef = {
     implicit def executor: ExecutionContext = factory.dispatcher
     MutableActor.create(new MutableActorConf[SortedMap[String, ActorRef], ManagerAction[In]] {
@@ -59,6 +64,7 @@ object SwfActorManager {
         }
         case SetAll(input) => {
           actors.values.foreach(conf.modifyActor(input, _))
+          Future.sequence(actors.values.map(infoOf)) pipeTo act.sender
           actors
         }
       }

@@ -1,26 +1,28 @@
-package jp.rf.swfsample.scalatra
+package jp.rf.swfsample.actor.manager
 
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.util.Timeout
 import com.amazonaws.services.simpleworkflow._
 import com.amazonaws.services.simpleworkflow.model._
 
-import jp.rf.swfsample.scalatra.data.{WorkerInput, WorkerOutput}
-import jp.rf.swfsample.actor.swf.SwfActor.{Active, Inactive, Start, Stop, State => ActorState}
-import jp.rf.swfsample.actor.swf.WorkerFactory
+import jp.rf.swfsample.data.{WorkerInput, WorkerOutput}
+import jp.rf.swfsample.actor.swf.{Active, Inactive, Start, Stop, State => ActorState}
+import jp.rf.swfsample.actor.swf.{ActivityCompleted, ActivityResult, Worker}
 
 object WorkerManager {
   def create(
     name: String,
     swf: AmazonSimpleWorkflowClient,
     domainName: String,
-    activityType: ActivityType
+    version: String,
+    taskList: String,
+    initialActorNum: Int = 1
   )(implicit factory: ActorRefFactory, timeout: Timeout): ActorRef = {
-    val actorFactory = WorkerFactory.create(swf, domainName, activityType)
     val nm = name
     SwfActorManager.create(new SwfActorManagerConf[WorkerInput, WorkerOutput] {
+      override val initialNum = initialActorNum
       override val name = nm
-      override def createActor = actorFactory.create
+      override def createActor = Worker.create(swf, domainName, taskList, action)
       override def createActor(input: WorkerInput) = {
         val actor = createActor
         if (input.active) {
@@ -43,5 +45,11 @@ object WorkerManager {
         WorkerOutput(SwfActorManager.actorIdOf(actor), active, status)
       }
     })
+  }
+  
+  def action(input: String): ActivityResult = {
+    println(input)
+    val result = "printed: " + input
+    ActivityCompleted(result)
   }
 }

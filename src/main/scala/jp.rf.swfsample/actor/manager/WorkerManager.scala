@@ -7,14 +7,13 @@ import com.amazonaws.services.simpleworkflow.model._
 
 import jp.rf.swfsample.data.{WorkerInput, WorkerOutput}
 import jp.rf.swfsample.actor.swf.{Active, Inactive, Start, Stop, State => ActorState}
-import jp.rf.swfsample.actor.swf.{ActivityCompleted, ActivityResult, Worker}
+import jp.rf.swfsample.actor.swf.{ActivityCompleted, ActivityFailed, ActivityResult, Worker}
 
 object WorkerManager {
   def create(
     name: String,
     swf: AmazonSimpleWorkflowClient,
     domainName: String,
-    version: String,
     taskList: String,
     initialActorNum: Int = 1
   )(implicit factory: ActorRefFactory, timeout: Timeout): ActorRef = {
@@ -47,9 +46,33 @@ object WorkerManager {
     })
   }
   
-  def action(input: String): ActivityResult = {
-    println(input)
-    val result = "printed: " + input
-    ActivityCompleted(result)
+  def action(task: ActivityTask): ActivityResult = {
+    val input = task.getInput
+    task.getActivityType.getName match {
+      case "start-ec2-instance-request" => {
+        val result = "start: " + input
+        println(result)
+        ActivityCompleted(input)
+      }
+      case "start-ec2-instance-check" => {
+        val result = "check started: " + input
+        println(result)
+        ActivityCompleted(input)
+      }
+      case "stop-ec2-instance-request" => {
+        val result = "stop: " + input
+        println(result)
+        ActivityCompleted(input)
+      }
+      case "stop-ec2-instance-check" => {
+        val result = "check stopped: " + input
+        println(result)
+        ActivityCompleted(input)
+      }
+      case invalidActivityName => {
+        println("invalid activity: " + invalidActivityName)
+        ActivityFailed(details = invalidActivityName, reason = "invalid activity")
+      }
+    }
   }
 }

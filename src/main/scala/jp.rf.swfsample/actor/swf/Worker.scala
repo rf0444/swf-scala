@@ -14,7 +14,7 @@ object Worker {
     swf: AmazonSimpleWorkflowClient,
     domainName: String,
     taskListName: String,
-    action: String => ActivityResult
+    action: ActivityTask => ActivityResult
   )(implicit factory: ActorRefFactory): ActorRef = {
     SwfActor.create(new SwfActorConf[ActivityTask] {
       override def poll = {
@@ -27,7 +27,7 @@ object Worker {
         if (task.getTaskToken == null) None else Some(task)
       }
       override def execute(task: ActivityTask) = {
-        action(task.getInput) match {
+        action(task) match {
           case ActivityCanceled(details) => {
             swf.respondActivityTaskCanceled(new RespondActivityTaskCanceledRequest()
               .withTaskToken(task.getTaskToken)

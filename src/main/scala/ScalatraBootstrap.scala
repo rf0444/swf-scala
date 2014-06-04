@@ -30,7 +30,6 @@ class ScalatraBootstrap extends LifeCycle {
     name = "decider-manager",
     swf = swf,
     domainName = domainName,
-    version = version,
     taskList = conf.getString("aws.swf.taskList.decision"),
     initialActorNum = 2
   )
@@ -38,7 +37,6 @@ class ScalatraBootstrap extends LifeCycle {
     name = "short-worker-manager",
     swf = swf,
     domainName = domainName,
-    version = version,
     taskList = conf.getString("aws.swf.taskList.activity.short"),
     initialActorNum = 2
   )
@@ -46,7 +44,6 @@ class ScalatraBootstrap extends LifeCycle {
     name = "long-worker-manager",
     swf = swf,
     domainName = domainName,
-    version = version,
     taskList = conf.getString("aws.swf.taskList.activity.long"),
     initialActorNum = 2
   )

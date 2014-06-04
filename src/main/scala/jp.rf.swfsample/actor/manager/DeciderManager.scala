@@ -9,12 +9,16 @@ import jp.rf.swfsample.data.{DeciderInput, DeciderOutput}
 import jp.rf.swfsample.actor.swf.{Active, Inactive, Start, Stop, State => ActorState}
 import jp.rf.swfsample.actor.swf.Decider
 
+sealed trait NextActivity
+case object NoNextActivity extends NextActivity
+case object NextActivityFailed extends NextActivity
+case class HasNextActivity(activity: ActivityType, input: String) extends NextActivity
+
 object DeciderManager {
   def create(
     name: String,
     swf: AmazonSimpleWorkflowClient,
     domainName: String,
-    version: String,
     taskList: String,
     initialActorNum: Int = 1
   )(implicit factory: ActorRefFactory, timeout: Timeout): ActorRef = {
@@ -22,7 +26,7 @@ object DeciderManager {
     SwfActorManager.create(new SwfActorManagerConf[DeciderInput, DeciderOutput] {
       override val initialNum = initialActorNum
       override val name = nm
-      override def createActor = Decider.create(swf, domainName, taskList, decide(version))
+      override def createActor = Decider.create(swf, domainName, taskList, decide)
       override def createActor(input: DeciderInput) = {
         val actor = createActor
         if (input.active) {
@@ -47,10 +51,24 @@ object DeciderManager {
     })
   }
   
-  val failEvents = scala.collection.Set("ScheduleActivityTaskFailed", "ActivityTaskFailed", "DecisionTaskTimedOut")
-  val cancelEvents = scala.collection.Set("ActivityTaskCancelRequested", "ActivityTaskCanceled")
-  def decide(version: String)(task: DecisionTask): Decision = {
+  val failEvents = scala.collection.Set(
+    "ActivityTaskFailed",
+    "ActivityTaskTimedOut",
+    "DecisionTaskTimedOut",
+    "ScheduleActivityTaskFailed"
+  )
+  val cancelEvents = scala.collection.Set(
+    "ActivityTaskCancelRequested",
+    "ActivityTaskCanceled",
+    "WorkflowExecutionCancelRequested"
+  )
+  def decide(task: DecisionTask): Decision = try {
     import scala.collection.JavaConverters._
+    if (task.getNextPageToken != null) {
+      // too long execution is not supported
+      return new Decision()
+        .withDecisionType(DecisionType.FailWorkflowExecution)
+    }
     val events = task.getEvents.asScala
     if (events.exists(event => failEvents.contains(event.getEventType))) {
       return new Decision()
@@ -60,24 +78,91 @@ object DeciderManager {
       return new Decision()
         .withDecisionType(DecisionType.CancelWorkflowExecution)
     }
-    if (events.exists(_.getEventType == "ActivityTaskCompleted")) {
-      return new Decision()
+    val eventMap = events.map(e => (Long.unbox(e.getEventId), e)).toMap
+    val nextActivity = lastActivityOf(events).map(nextActivityForCompleteActivity(_, eventMap))
+    nextActivity.orElse(
+      events.find(_.getEventType == "WorkflowExecutionStarted").map(firstActivityForExecutionStarted)
+    ) match {
+      case Some(NoNextActivity) => new Decision()
         .withDecisionType(DecisionType.CompleteWorkflowExecution)
+      case Some(NextActivityFailed) => new Decision()
+        .withDecisionType(DecisionType.FailWorkflowExecution)
+      case Some(HasNextActivity(activity, input)) => {
+        val activityId = java.util.UUID.randomUUID.toString
+        new Decision()
+          .withDecisionType(DecisionType.ScheduleActivityTask)
+          .withScheduleActivityTaskDecisionAttributes(new ScheduleActivityTaskDecisionAttributes()
+            .withActivityId(activityId)
+            .withActivityType(activity)
+            .withInput(input)
+          )
+      } 
+      case None => new Decision()
+        .withDecisionType(DecisionType.FailWorkflowExecution)
     }
-    val input = events
-      .filter(_.getEventType == "WorkflowExecutionStarted").take(1)
-      .map(_.getWorkflowExecutionStartedEventAttributes.getInput)
-      .mkString("\n")
-    val timestamp = System.currentTimeMillis.toString
-    val activityType = new ActivityType()
-      .withName("start-ec2-instance-request")
-      .withVersion(version)
-    new Decision()
-      .withDecisionType(DecisionType.ScheduleActivityTask)
-      .withScheduleActivityTaskDecisionAttributes(new ScheduleActivityTaskDecisionAttributes()
-        .withActivityId(timestamp)
-        .withActivityType(activityType)
-        .withInput(input)
-      )
+  } catch {
+    case e: Exception => {
+      e.printStackTrace
+      new Decision().withDecisionType(DecisionType.FailWorkflowExecution)
+    }
+  }
+  
+  def lastActivityOf(events: Seq[HistoryEvent]): Option[HistoryEvent] = {
+    events.filter(_.getEventType == "ActivityTaskCompleted").lastOption
+  }
+  
+  def nextActivityForCompleteActivity(event: HistoryEvent, eventMap: Map[Long, HistoryEvent]): NextActivity = {
+    val attr = event.getActivityTaskCompletedEventAttributes
+    if (attr == null) {
+      return NextActivityFailed
+    }
+    eventMap.get(attr.getScheduledEventId).map { scheduleEvent =>
+      val scheduleAttr = scheduleEvent.getActivityTaskScheduledEventAttributes
+      if (scheduleAttr == null) {
+        return NextActivityFailed
+      }
+      val activity = scheduleAttr.getActivityType
+      nextActivityFor(activity, attr.getResult)
+    }.getOrElse(NextActivityFailed)
+  }
+  def nextActivityFor(activity: ActivityType, result: String): NextActivity = activity.getName match {
+    case "start-ec2-instance-request" => HasNextActivity(
+      new ActivityType()
+        .withName("start-ec2-instance-check")
+        .withVersion(activity.getVersion),
+      result
+    )
+    case "start-ec2-instance-check" => NoNextActivity
+    case "stop-ec2-instance-request" => HasNextActivity(
+      new ActivityType()
+        .withName("start-ec2-instance-check")
+        .withVersion(activity.getVersion),
+      result
+    )
+    case "stop-ec2-instance-check" => NoNextActivity
+    case _ => NextActivityFailed
+  }
+  def firstActivityForExecutionStarted(event: HistoryEvent): NextActivity = {
+    val attr = event.getWorkflowExecutionStartedEventAttributes
+    if (attr == null) {
+      return NextActivityFailed
+    }
+    val workflow = attr.getWorkflowType
+    firstActivityFor(workflow, attr.getInput)
+  }
+  def firstActivityFor(workflow: WorkflowType, input: String): NextActivity = workflow.getName match {
+    case "start-ec2-instance" => HasNextActivity(
+      new ActivityType()
+        .withName("start-ec2-instance-request")
+        .withVersion(workflow.getVersion),
+      input
+    )
+    case "stop-ec2-instance" => HasNextActivity(
+      new ActivityType()
+        .withName("stop-ec2-instance-request")
+        .withVersion(workflow.getVersion),
+      input
+    )
+    case _ => NextActivityFailed
   }
 }

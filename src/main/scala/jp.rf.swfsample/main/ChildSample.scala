@@ -11,47 +11,65 @@ object ChildSample {
   def main(args: Array[String]) {
     val timeout = FiniteDuration(5, SECONDS)
     val system = ActorSystem("child-sample")
-    val actor = system.actorOf(Props(new Actor {
-      def behavior(children: Set[ActorRef]): Receive = {
-        case 'get => {
-          sender ! children
-          context.become(behavior(children))
-        }
-        case Terminated(a) => {
-          println("terminated: " + a)
-          context.become(behavior(children - a))
-        }
-        case x => {
-          val child = context.actorOf(Props(new Actor {
-            def receive = {
-              case x => {
-                println("start")
-                Thread.sleep(5000)
-                println(x)
-                context stop self
-              }
-            }
-          }))
-          context.watch(child)
-          child ! x
-          context.become(behavior(children + child))
-        }
-      }
-      def receive: Receive = behavior(Set.empty)
-    }))
-    println(Await.result(ask(actor, 'get)(Timeout(timeout)), timeout))
-    actor ! "hoge"
-    Thread.sleep(10)
-    println(Await.result(ask(actor, 'get)(Timeout(timeout)), timeout))
+    val actor = system.actorOf(Props(new ManagerActor(4)))
+    for (i <- 1 to 10) {
+      actor ! "hoge" + i
+    } 
     Thread.sleep(2000)
-    actor ! "hoge"
-    Thread.sleep(10)
-    println(Await.result(ask(actor, 'get)(Timeout(timeout)), timeout))
-    Thread.sleep(3000)
-    println(Await.result(ask(actor, 'get)(Timeout(timeout)), timeout))
-    Thread.sleep(2000)
-    println(Await.result(ask(actor, 'get)(Timeout(timeout)), timeout))
     Await.ready(gracefulStop(actor, timeout)(system), timeout)
     system.shutdown()
+  }
+}
+class ManagerActor(val limit: Int) extends Actor {
+  val pool = context.actorOf(Props(new PoolActor))
+  def workers = context.children.to[Set] - pool
+  def receive = {
+    case 'workers => {
+      sender ! workers
+    }
+    case Terminated(a) => {
+      pool ! 'finished
+    }
+    case x => {
+      if (workers.size < limit) {
+        val child = context.actorOf(Props(new WorkerActor))
+        context.watch(child)
+        child ! x
+      } else {
+        pool ! x
+      }
+    }
+  }
+}
+class PoolActor extends Actor {
+  import scala.collection.immutable.Queue
+  def behavior(queue: Queue[Any]): Receive = {
+    case 'get => {
+      sender ! queue
+      context.become(behavior(queue))
+    }
+    case 'finished => {
+      if (queue.isEmpty) {
+        context.become(behavior(queue))
+      } else {
+        val (first, remains) = queue.dequeue
+        sender ! first
+        context.become(behavior(remains))
+      }
+    }
+    case x => {
+      context.become(behavior(queue.enqueue(x)))
+    }
+  }
+  def receive = behavior(Queue.empty)
+}
+class WorkerActor extends Actor {
+  def receive = {
+    case x => {
+      println("start: " + x)
+      Thread.sleep(500)
+      println("finish: " + x)
+      context.stop(self)
+    }
   }
 }

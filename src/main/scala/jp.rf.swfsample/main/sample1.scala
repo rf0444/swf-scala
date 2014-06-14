@@ -1,13 +1,12 @@
-package jp.rf.swfsample.main
+package jp.rf.swfsample.main.sample1
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
 import akka.actor.{Actor, ActorContext, ActorRef, ActorSystem, PoisonPill, Props, Terminated}
 import akka.pattern.{ask, gracefulStop}
-import akka.util.Timeout
 
-object ChildSample {
+object Main {
   def main(args: Array[String]) {
     val timeout = FiniteDuration(5, SECONDS)
     val system = ActorSystem("child-sample")
@@ -43,6 +42,7 @@ class ManagerActor(val limit: Int) extends Actor {
 }
 class PoolActor extends Actor {
   import scala.collection.immutable.Queue
+  def receive = behavior(Queue.empty)
   def behavior(queue: Queue[Any]): Receive = {
     case 'get => {
       sender ! queue
@@ -61,7 +61,6 @@ class PoolActor extends Actor {
       context.become(behavior(queue.enqueue(x)))
     }
   }
-  def receive = behavior(Queue.empty)
 }
 class WorkerActor extends Actor {
   def receive = {

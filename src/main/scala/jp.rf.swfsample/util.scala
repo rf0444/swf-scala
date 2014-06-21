@@ -7,4 +7,5 @@ package object util {
     val cls = classTag[A].runtimeClass.asInstanceOf[Class[A]]
     if (cls.isInstance(x)) Some(cls.cast(x)) else None
   }
+  def uuid = java.util.UUID.randomUUID.toString
 }
